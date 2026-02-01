@@ -159,18 +159,22 @@ public class OrdersResultController : ControllerBase
 
         var result = await _orderService.SubmitOrderAsync(orderId);
 
-        if (result.IsSuccess)
-        {
-            _logger.LogInformation("Order {OrderId} submitted successfully", orderId);
-            return Ok(result.Value);
-        }
-
-        _logger.LogWarning(
-            "Failed to submit order {OrderId}: {Error}",
-            orderId,
-            result.Error!.Message
+        return result.Match(
+            success =>
+            {
+                _logger.LogInformation("Order {OrderId} submitted successfully", orderId);
+                return Ok(success);
+            },
+            failure =>
+            {
+                _logger.LogWarning(
+                    "Failed to submit order {OrderId}: {Error}",
+                    orderId,
+                    failure.Message
+                );
+                return result.ToProblemDetails(HttpContext);
+            }
         );
-        return result.ToProblemDetails(HttpContext);
     }
 
     [HttpPost("{orderId}/payment")]
@@ -191,14 +195,16 @@ public class OrdersResultController : ControllerBase
     {
         _logger.LogInformation("Processing payment for order {OrderId}", orderId);
 
-        // Create Money using Result pattern
         var moneyResult = Money.TryCreate(request.Amount, request.Currency);
-        if (moneyResult.IsFailure)
-            return Result<Order>.Failure(moneyResult.Error!).ToProblemDetails(HttpContext);
 
-        var result = await _orderService.ProcessPaymentAsync(orderId, moneyResult.Value);
-
-        return result.ToProblemDetails(HttpContext);
+        return await moneyResult.Match(
+            async money =>
+            {
+                var result = await _orderService.ProcessPaymentAsync(orderId, money);
+                return result.ToProblemDetails(HttpContext);
+            },
+            error => Task.FromResult(Result<Order>.Failure(error).ToProblemDetails(HttpContext))
+        );
     }
 
     [HttpPost("{orderId}/ship")]
@@ -259,18 +265,22 @@ public class OrdersResultController : ControllerBase
 
         var result = await _orderService.CancelOrderAsync(orderId, request.Reason);
 
-        if (result.IsSuccess)
-        {
-            _logger.LogInformation("Order {OrderId} cancelled successfully", orderId);
-            return NoContent();
-        }
-
-        _logger.LogWarning(
-            "Failed to cancel order {OrderId}: {Error}",
-            orderId,
-            result.Error!.Message
+        return result.Match(
+            () =>
+            {
+                _logger.LogInformation("Order {OrderId} cancelled successfully", orderId);
+                return NoContent();
+            },
+            failure =>
+            {
+                _logger.LogWarning(
+                    "Failed to cancel order {OrderId}: {Error}",
+                    orderId,
+                    failure.Message
+                );
+                return result.ToProblemDetails(HttpContext);
+            }
         );
-        return result.ToProblemDetails(HttpContext);
     }
 
     /// <summary>
@@ -298,18 +308,20 @@ public class OrdersResultController : ControllerBase
         );
 
         var moneyResult = Money.TryCreate(request.PaymentAmount, request.PaymentCurrency);
-        if (moneyResult.IsFailure)
-            return Result<Order>.Failure(moneyResult.Error!).ToProblemDetails(HttpContext);
-
         var items = request.Items.Select(i => (i.ProductId, i.Quantity)).ToArray();
 
-        var result = await _orderService.ProcessOrderWorkflowAsync(
-            request.CustomerId,
-            request.ShippingAddress,
-            items,
-            moneyResult.Value
+        return await moneyResult.Match(
+            async money =>
+            {
+                var result = await _orderService.ProcessOrderWorkflowAsync(
+                    request.CustomerId,
+                    request.ShippingAddress,
+                    items,
+                    money
+                );
+                return result.ToProblemDetails(HttpContext);
+            },
+            error => Task.FromResult(Result<Order>.Failure(error).ToProblemDetails(HttpContext))
         );
-
-        return result.ToProblemDetails(HttpContext);
     }
 }

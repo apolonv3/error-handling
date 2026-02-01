@@ -4,15 +4,16 @@ This document lists parts of the codebase where error handling can be updated or
 
 ---
 
-## 1. **API layer – Use typed errors everywhere**
+## 1. **API layer – Use typed errors everywhere** ✅ Implemented
 
-**Current:** `OrdersResultController` still uses the base `Error.Validation(...)` in one place and `result.Error!` (null-forgiving) in several places.
+**Current:** ~~`OrdersResultController` still uses the base `Error.Validation(...)` in one place and `result.Error!` (null-forgiving) in several places.~~ **Done.**
 
-**Improve:**
-- Replace `Error.Validation("orderId", "Invalid order ID")` with `new OrderValidationError("orderId", "Invalid order ID")` so all Result-path errors are typed.
-- Prefer `result.Match(onSuccess, onFailure)` or `result.GetValueOrDefault()` instead of `result.Error!` so the compiler enforces handling and you avoid null-forgiving.
+**Implemented:**
+- `GetOrder` already used `OrderValidationError("orderId", "Invalid order ID")`; no base `Error.Validation` remains in the controller.
+- All `result.Error!` usages removed: **SubmitOrder**, **CancelOrder**, **ProcessPayment**, and **ProcessOrderWorkflow** now use `result.Match(onSuccess, onFailure)` so the failure branch receives the error as a parameter (no null-forgiving).
+- Added `Result.Match<TResult>(Func<TResult> onSuccess, Func<Error, TResult> onFailure)` on the base `Result` class so unit results (e.g. `CancelOrderAsync`) can use Match as well.
 
-**Files:** `src/ErrorHandling.Api/Controllers/OrdersResultController.cs`
+**Files:** `src/ErrorHandling.Api/Controllers/OrdersResultController.cs`, `src/ErrorHandling.Domain/Results/Result.cs`
 
 ---
 

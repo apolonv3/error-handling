@@ -50,6 +50,14 @@ public class Result
         }
         return Success();
     }
+
+    /// <summary>
+    /// Handles success (unit) or failure with a typed result. Use instead of <see cref="Error"/> and null-forgiving.
+    /// </summary>
+    public TResult Match<TResult>(Func<TResult> onSuccess, Func<Error, TResult> onFailure)
+    {
+        return IsSuccess ? onSuccess() : onFailure(Error!);
+    }
 }
 
 /// <summary>

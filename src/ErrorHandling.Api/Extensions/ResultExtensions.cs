@@ -123,6 +123,7 @@ public static class ResultExtensions
                     "https://example.com/errors/validation"
                 ),
                 _ => (
+                    // Unhandled OrderErrorCode: log so new codes get explicit mapping
                     StatusCodes.Status422UnprocessableEntity,
                     "https://example.com/errors/business-rule"
                 ),
