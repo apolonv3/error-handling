@@ -83,8 +83,9 @@ public class OrdersResultController : ControllerBase
         // Validation using Result
         if (orderId == Guid.Empty)
         {
-            var error = Error.Validation("orderId", "Invalid order ID");
-            return Result<Order>.Failure(error).ToProblemDetails(HttpContext);
+            return Result<Order>
+                .Failure(new OrderValidationError("orderId", "Invalid order ID"))
+                .ToProblemDetails(HttpContext);
         }
 
         // Simulated order retrieval
