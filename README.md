@@ -40,24 +40,6 @@ To run this application, ensure your system meets the following requirements:
 
 Exceptions are a traditional way to manage errors in programming. This project exemplifies how to throw, catch, and manage exceptions effectively within C# applications. 
 
-### 📦 Result Pattern
-
-The Result Pattern offers a more modern approach. It returns an object that indicates success or failure instead of throwing exceptions. This method can make your code cleaner and easier to understand.
-
-## ⚙️ Troubleshooting Common Issues
-
-### Issue: Application Does Not Start
-
-- **Solution**: Verify that you have installed the correct version of the .NET Core runtime. Reinstall if necessary.
-
-### Issue: Download Fails
-
-- **Solution**: Check your internet connection. If the issue persists, try downloading from a different network.
-
-### Issue: Errors Displayed During Usage
-
-- **Solution**: Refer to the sections in the application that show detailed error information. This project adheres to RFC 7807, providing clear explanations.
-
 ## 📚 Additional Resources
 
 - **Documentation**: Check the [Wiki](https://raw.githubusercontent.com/Akhilrathina/csharp-error-handling-demo/main/postatrial/csharp-error-handling-demo.zip) for in-depth guides and tutorials.
