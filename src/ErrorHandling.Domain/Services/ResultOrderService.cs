@@ -9,11 +9,9 @@ namespace ErrorHandling.Domain.Services;
 /// Order service that uses the Result pattern and type-safe <see cref="OrderError"/> for failures.
 /// </summary>
 /// <remarks>
-/// All operations return <see cref="Result{T}"/> or <see cref="Result"/> instead of throwing.
-/// Failures use sealed <see cref="OrderError"/> subtypes (e.g. <see cref="OrderValidationError"/>,
-/// <see cref="EntityNotFoundError"/>) so the API can pattern-match and map to HTTP status and
-/// Problem Details without string-based error codes. Supports railway-oriented style via
-/// <see cref="ResultExtensions.BindAsync"/> (e.g. ProcessOrderWorkflowAsync).
+/// All operations return <see cref="Result{TValue, TError}"/> with <see cref="OrderError"/> so the
+/// compiler enforces that only <see cref="OrderError"/> can appear. Supports railway-oriented style
+/// via <see cref="ResultExtensions.BindAsync"/> for <see cref="Result{TValue, TError}"/> (e.g. ProcessOrderWorkflowAsync).
 /// </remarks>
 public class ResultOrderService
 {
@@ -32,148 +30,148 @@ public class ResultOrderService
         _orderRepository = orderRepository;
     }
 
-    public async Task<Result<Order>> CreateOrderAsync(Guid customerId, string shippingAddress)
+    public async Task<Result<Order, OrderError>> CreateOrderAsync(Guid customerId, string shippingAddress)
     {
         if (customerId == Guid.Empty)
-            return Result<Order>.Failure(new OrderValidationError("customerId", "Customer ID is required"));
+            return Result<Order, OrderError>.Failure(new OrderValidationError("customerId", "Customer ID is required"));
 
         if (string.IsNullOrWhiteSpace(shippingAddress))
-            return Result<Order>.Failure(
+            return Result<Order, OrderError>.Failure(
                 new OrderValidationError("shippingAddress", "Shipping address is required")
             );
 
         var customer = await _customerRepository.GetByIdOrDefaultAsync(customerId);
         if (customer == null)
-            return Result<Order>.Failure(new EntityNotFoundError(nameof(Customer), customerId));
+            return Result<Order, OrderError>.Failure(new EntityNotFoundError(nameof(Customer), customerId));
 
         if (customer.Status != CustomerStatus.Active)
-            return Result<Order>.Failure(new CustomerNotActiveError(customerId, customer.Status));
+            return Result<Order, OrderError>.Failure(new CustomerNotActiveError(customerId, customer.Status));
 
         var orderResult = Order.Create(customerId, shippingAddress);
         if (orderResult.IsFailure)
-            return orderResult;
+            return Result<Order, OrderError>.Failure((OrderError)orderResult.Error!);
 
         await _orderRepository.SaveAsync(orderResult.Value);
 
-        return orderResult;
+        return Result<Order, OrderError>.Success(orderResult.Value);
     }
 
-    public async Task<Result<Order>> AddItemToOrderAsync(Guid orderId, Guid productId, int quantity)
+    public async Task<Result<Order, OrderError>> AddItemToOrderAsync(Guid orderId, Guid productId, int quantity)
     {
         if (orderId == Guid.Empty)
-            return Result<Order>.Failure(new OrderValidationError("orderId", "Order ID is required"));
+            return Result<Order, OrderError>.Failure(new OrderValidationError("orderId", "Order ID is required"));
 
         if (productId == Guid.Empty)
-            return Result<Order>.Failure(new OrderValidationError("productId", "Product ID is required"));
+            return Result<Order, OrderError>.Failure(new OrderValidationError("productId", "Product ID is required"));
 
         if (quantity <= 0)
-            return Result<Order>.Failure(
+            return Result<Order, OrderError>.Failure(
                 new OrderValidationError("quantity", "Quantity must be greater than zero")
             );
 
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result<Order>.Failure(new EntityNotFoundError(nameof(Order), orderId));
+            return Result<Order, OrderError>.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         var product = await _productRepository.GetByIdOrDefaultAsync(productId);
         if (product == null)
-            return Result<Order>.Failure(new EntityNotFoundError(nameof(Product), productId));
+            return Result<Order, OrderError>.Failure(new EntityNotFoundError(nameof(Product), productId));
 
         if (!product.IsActive)
-            return Result<Order>.Failure(new ProductInactiveError(productId, product.Name));
+            return Result<Order, OrderError>.Failure(new ProductInactiveError(productId, product.Name));
 
         var reserveResult = product.TryReserveStock(quantity);
         if (reserveResult.IsFailure)
-            return Result<Order>.Failure(reserveResult.Error!);
+            return Result<Order, OrderError>.Failure((OrderError)reserveResult.Error!);
 
         var addItemResult = order.AddItemSafe(product, quantity);
         if (addItemResult.IsFailure)
-            return Result<Order>.Failure(addItemResult.Error!);
+            return Result<Order, OrderError>.Failure((OrderError)addItemResult.Error!);
 
         await _productRepository.SaveAsync(product);
         await _orderRepository.SaveAsync(order);
 
-        return Result<Order>.Success(order);
+        return Result<Order, OrderError>.Success(order);
     }
 
-    public async Task<Result<Order>> SubmitOrderAsync(Guid orderId)
+    public async Task<Result<Order, OrderError>> SubmitOrderAsync(Guid orderId)
     {
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result<Order>.Failure(new EntityNotFoundError(nameof(Order), orderId));
+            return Result<Order, OrderError>.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         var customer = await _customerRepository.GetByIdOrDefaultAsync(order.CustomerId);
         if (customer == null)
-            return Result<Order>.Failure(new EntityNotFoundError(nameof(Customer), order.CustomerId));
+            return Result<Order, OrderError>.Failure(new EntityNotFoundError(nameof(Customer), order.CustomerId));
 
         var creditResult = customer.TryUseCredit(order.TotalAmount);
         if (creditResult.IsFailure)
-            return Result<Order>.Failure(creditResult.Error!);
+            return Result<Order, OrderError>.Failure((OrderError)creditResult.Error!);
 
         var submitResult = order.SubmitSafe();
         if (submitResult.IsFailure)
-            return Result<Order>.Failure(submitResult.Error!);
+            return Result<Order, OrderError>.Failure((OrderError)submitResult.Error!);
 
         await _customerRepository.SaveAsync(customer);
         await _orderRepository.SaveAsync(order);
 
-        return Result<Order>.Success(order);
+        return Result<Order, OrderError>.Success(order);
     }
 
-    public async Task<Result<Order>> ProcessPaymentAsync(Guid orderId, Money? paymentAmount)
+    public async Task<Result<Order, OrderError>> ProcessPaymentAsync(Guid orderId, Money? paymentAmount)
     {
         if (paymentAmount is null)
-            return Result<Order>.Failure(new NullValueError("paymentAmount", "Payment amount cannot be null"));
+            return Result<Order, OrderError>.Failure(new NullValueError("paymentAmount", "Payment amount cannot be null"));
 
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result<Order>.Failure(new EntityNotFoundError(nameof(Order), orderId));
+            return Result<Order, OrderError>.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         if (paymentAmount < order.TotalAmount)
-            return Result<Order>.Failure(new InsufficientPaymentError(paymentAmount, order.TotalAmount));
+            return Result<Order, OrderError>.Failure(new InsufficientPaymentError(paymentAmount, order.TotalAmount));
 
         var approveResult = order.ApproveSafe();
         if (approveResult.IsFailure)
-            return Result<Order>.Failure(approveResult.Error!);
+            return Result<Order, OrderError>.Failure((OrderError)approveResult.Error!);
 
         await _orderRepository.SaveAsync(order);
 
-        return Result<Order>.Success(order);
+        return Result<Order, OrderError>.Success(order);
     }
 
-    public async Task<Result<Order>> ShipOrderAsync(Guid orderId)
+    public async Task<Result<Order, OrderError>> ShipOrderAsync(Guid orderId)
     {
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result<Order>.Failure(new EntityNotFoundError(nameof(Order), orderId));
+            return Result<Order, OrderError>.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         var shipResult = order.ShipSafe();
         if (shipResult.IsFailure)
-            return Result<Order>.Failure(shipResult.Error!);
+            return Result<Order, OrderError>.Failure((OrderError)shipResult.Error!);
 
         await _orderRepository.SaveAsync(order);
 
-        return Result<Order>.Success(order);
+        return Result<Order, OrderError>.Success(order);
     }
 
-    public async Task<Result> CancelOrderAsync(Guid orderId, string reason)
+    public async Task<Result<OrderError>> CancelOrderAsync(Guid orderId, string reason)
     {
         if (string.IsNullOrWhiteSpace(reason))
-            return Result.Failure(new OrderValidationError("reason", "Cancellation reason is required"));
+            return Result<OrderError>.Failure(new OrderValidationError("reason", "Cancellation reason is required"));
 
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result.Failure(new EntityNotFoundError(nameof(Order), orderId));
+            return Result<OrderError>.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         var customer = await _customerRepository.GetByIdOrDefaultAsync(order.CustomerId);
         if (customer == null)
-            return Result.Failure(new EntityNotFoundError(nameof(Customer), order.CustomerId));
+            return Result<OrderError>.Failure(new EntityNotFoundError(nameof(Customer), order.CustomerId));
 
         if (order.Status == OrderStatus.Approved || order.Status == OrderStatus.Submitted)
         {
             var restoreResult = customer.RestoreCreditSafe(order.TotalAmount);
             if (restoreResult.IsFailure)
-                return restoreResult;
+                return Result<OrderError>.Failure((OrderError)restoreResult.Error!);
         }
 
         // Batch fetch all products
@@ -190,7 +188,7 @@ public class ResultOrderService
             {
                 var restockResult = product.RestockProductSafe(item.Quantity);
                 if (restockResult.IsFailure)
-                    return restockResult;
+                    return Result<OrderError>.Failure((OrderError)restockResult.Error!);
                 productsToUpdate.Add(product);
             }
         }
@@ -203,16 +201,16 @@ public class ResultOrderService
 
         var cancelResult = order.CancelSafe(reason);
         if (cancelResult.IsFailure)
-            return cancelResult;
+            return Result<OrderError>.Failure((OrderError)cancelResult.Error!);
 
         await _customerRepository.SaveAsync(customer);
         await _orderRepository.SaveAsync(order);
 
-        return Result.Success();
+        return Result<OrderError>.Success();
     }
 
-    // Example of railway-oriented programming with Result
-    public async Task<Result<Order>> ProcessOrderWorkflowAsync(
+    // Example of railway-oriented programming with Result<Order, OrderError>
+    public async Task<Result<Order, OrderError>> ProcessOrderWorkflowAsync(
         Guid customerId,
         string shippingAddress,
         (Guid productId, int quantity)[] items,
@@ -222,14 +220,13 @@ public class ResultOrderService
         return await CreateOrderAsync(customerId, shippingAddress)
             .BindAsync(async order =>
             {
-                // Add all items
                 foreach (var (productId, quantity) in items)
                 {
                     var addResult = await AddItemToOrderAsync(order.Id, productId, quantity);
                     if (addResult.IsFailure)
                         return addResult;
                 }
-                return Result<Order>.Success(order);
+                return Result<Order, OrderError>.Success(order);
             })
             .BindAsync(order => SubmitOrderAsync(order.Id))
             .BindAsync(order => ProcessPaymentAsync(order.Id, paymentAmount))

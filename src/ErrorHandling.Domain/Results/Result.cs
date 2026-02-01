@@ -207,3 +207,43 @@ public class Result<TValue, TError>
         return IsSuccess ? onSuccess(Value) : onFailure(Error);
     }
 }
+
+/// <summary>
+/// Represents the outcome of an operation that can succeed (unit) or fail with a typed error <typeparamref name="TError"/>.
+/// </summary>
+/// <remarks>
+/// Use for operations that return no value on success but need a strongly-typed error (e.g. <see cref="OrderError"/>).
+/// </remarks>
+public class Result<TError>
+    where TError : class
+{
+    private readonly TError _error;
+
+    public bool IsSuccess { get; }
+    public bool IsFailure => !IsSuccess;
+
+    public TError Error
+    {
+        get
+        {
+            if (IsSuccess)
+                throw new InvalidOperationException("Cannot access error on success result");
+            return _error;
+        }
+    }
+
+    private Result(TError error, bool isSuccess)
+    {
+        _error = error;
+        IsSuccess = isSuccess;
+    }
+
+    public static Result<TError> Success() => new(default!, true);
+
+    public static Result<TError> Failure(TError error) => new(error, false);
+
+    public TResult Match<TResult>(Func<TResult> onSuccess, Func<TError, TResult> onFailure)
+    {
+        return IsSuccess ? onSuccess() : onFailure(Error);
+    }
+}
