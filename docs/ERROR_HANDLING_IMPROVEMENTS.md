@@ -17,15 +17,15 @@ This document lists parts of the codebase where error handling can be updated or
 
 ---
 
-## 2. **Entity-level errors – Align with OrderError where useful**
+## 2. **Entity-level errors – Align with OrderError where useful** ✅ Implemented (Option B)
 
-**Current:** Domain entities (`Order`, `Customer`, `Product`) return base `Error`, `BusinessRuleError`, or `InvalidStateTransitionError` from their `Try*` / `*Safe` methods. The service then does `return Result<Order>.Failure(reserveResult.Error!)` and the API maps via `Error.Type` (fallback in `GetStatusAndType`).
+**Implemented (Option B):** Entity-level errors from order-scoped operations now return typed `OrderError`. The service then does `return Result<Order>.Failure(reserveResult.Error!)` and the API maps via `Error.Type` (fallback in `GetStatusAndType`).
 
 **Improve:**
 - Option A: Keep entities generic (no dependency on `OrderError`) and document that entity errors are mapped by `Error.Type` and subclasses in the API. No code change.
 - Option B: Where an entity error is clearly order-scoped (e.g. `Order.SubmitSafe()` returns “order must have items”), you could introduce a small set of shared domain error types (or have entities return a union type) so the API can switch on the same types. This increases type safety but adds coupling between entities and the order error model.
 
-**Files:** `src/ErrorHandling.Domain/Entities/Order.cs`, `Customer.cs`, `Product.cs`
+**Files:** `src/ErrorHandling.Domain/Results/OrderErrors.cs`, `Entities/Order.cs`, `Product.cs`, `Customer.cs`, `ErrorHandling.Api/Extensions/ResultExtensions.cs`
 
 ---
 

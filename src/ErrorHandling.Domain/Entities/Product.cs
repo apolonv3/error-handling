@@ -122,26 +122,14 @@ public class Product
     {
         if (quantity <= 0)
             return Result<int>.Failure(
-                Error.Validation("quantity", "Quantity must be greater than zero")
+                new OrderValidationError("quantity", "Quantity must be greater than zero")
             );
 
         if (!IsActive)
-            return Result<int>.Failure(
-                new BusinessRuleError(
-                    "PRODUCT_INACTIVE",
-                    "Cannot reserve stock for inactive product"
-                )
-            );
+            return Result<int>.Failure(new ProductInactiveError(Id, Name));
 
         if (StockQuantity < quantity)
-            return Result<int>.Failure(
-                new BusinessRuleError(
-                    "INSUFFICIENT_STOCK",
-                    $"Insufficient stock. Available: {StockQuantity}, Requested: {quantity}"
-                )
-                    .WithMetadata("availableStock", StockQuantity)
-                    .WithMetadata("requestedQuantity", quantity)
-            );
+            return Result<int>.Failure(new InsufficientStockError(StockQuantity, quantity));
 
         StockQuantity -= quantity;
         return Result<int>.Success(StockQuantity);
@@ -159,7 +147,7 @@ public class Product
     {
         if (quantity <= 0)
             return Result.Failure(
-                Error.Validation("quantity", "Restock quantity must be greater than zero")
+                new OrderValidationError("quantity", "Restock quantity must be greater than zero")
             );
 
         StockQuantity += quantity;
