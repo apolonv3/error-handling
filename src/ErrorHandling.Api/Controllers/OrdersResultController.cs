@@ -9,9 +9,14 @@ using Microsoft.AspNetCore.Mvc;
 namespace ErrorHandling.Api.Controllers;
 
 /// <summary>
-/// Controller demonstrating Result pattern error handling
-/// Results are converted to appropriate HTTP responses
+/// API controller for order operations using the Result pattern and type-safe errors.
 /// </summary>
+/// <remarks>
+/// All endpoints call <see cref="ResultOrderService"/> and convert <see cref="Result{T}"/> or
+/// <see cref="Result"/> to HTTP responses via <see cref="ResultExtensions.ToProblemDetails"/>.
+/// Failures use sealed <see cref="OrderError"/> types and are mapped to RFC 7807 Problem Details
+/// with the correct status code (400, 404, 422, etc.) based on error type.
+/// </remarks>
 [ApiController]
 [Route("api/v1/result/orders")]
 public class OrdersResultController : ControllerBase

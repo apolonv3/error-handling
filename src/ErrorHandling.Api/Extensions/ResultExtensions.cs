@@ -4,8 +4,21 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ErrorHandling.Api.Extensions;
 
+/// <summary>
+/// Extension methods to convert domain <see cref="Result{T}"/> and <see cref="Error"/> into
+/// HTTP responses using RFC 7807 Problem Details.
+/// </summary>
+/// <remarks>
+/// Success results are mapped to 200/201/204 as appropriate. Failures are mapped using
+/// type-safe pattern matching on <see cref="OrderError"/> (and <see cref="OrderErrorCode"/>)
+/// when available, otherwise using <see cref="Error.Type"/> for non-order errors (e.g. from entities).
+/// </remarks>
 public static class ResultExtensions
 {
+    /// <summary>
+    /// Converts a <see cref="Result{T}"/> to an <see cref="IActionResult"/>.
+    /// Success returns Ok(value); failure returns Problem Details with status and type derived from the error.
+    /// </summary>
     public static IActionResult ToProblemDetails<T>(this Result<T> result, HttpContext context)
     {
         if (result.IsSuccess)
@@ -14,6 +27,10 @@ public static class ResultExtensions
         return ConvertErrorToProblemDetails(result.Error!, context);
     }
 
+    /// <summary>
+    /// Converts a unit <see cref="Result"/> to an <see cref="IActionResult"/>.
+    /// Success returns 204 No Content; failure returns Problem Details.
+    /// </summary>
     public static IActionResult ToProblemDetails(this Result result, HttpContext context)
     {
         if (result.IsSuccess)
@@ -22,6 +39,9 @@ public static class ResultExtensions
         return ConvertErrorToProblemDetails(result.Error!, context);
     }
 
+    /// <summary>
+    /// Builds RFC 7807 Problem Details from a domain <see cref="Error"/> and current <see cref="HttpContext"/>.
+    /// </summary>
     private static IActionResult ConvertErrorToProblemDetails(Error error, HttpContext context)
     {
         var (statusCode, type) = GetStatusAndType(error);

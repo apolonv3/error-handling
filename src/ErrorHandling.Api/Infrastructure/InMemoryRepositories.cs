@@ -4,7 +4,14 @@ using ErrorHandling.Domain.ValueObjects;
 
 namespace ErrorHandling.Api.Infrastructure;
 
-// Simple in-memory implementations for demo purposes
+/// <summary>
+/// In-memory implementation of <see cref="ICustomerRepository"/>.
+/// </summary>
+/// <remarks>
+/// Stores customers in a dictionary. Seeded with one demo customer. Intended for
+/// demos and tests; replace with a real persistence implementation (e.g. EF Core)
+/// for production.
+/// </remarks>
 public class InMemoryCustomerRepository : ICustomerRepository
 {
     private readonly Dictionary<Guid, Customer> _customers = new();
@@ -38,6 +45,13 @@ public class InMemoryCustomerRepository : ICustomerRepository
     }
 }
 
+/// <summary>
+/// In-memory implementation of <see cref="IProductRepository"/>.
+/// </summary>
+/// <remarks>
+/// Stores products in a dictionary. Seeded with two demo products (Laptop, Mouse).
+/// Used for demos and tests; use a real data store in production.
+/// </remarks>
 public class InMemoryProductRepository : IProductRepository
 {
     private readonly Dictionary<Guid, Product> _products = new();
@@ -94,6 +108,13 @@ public class InMemoryProductRepository : IProductRepository
     }
 }
 
+/// <summary>
+/// In-memory implementation of <see cref="IOrderRepository"/>.
+/// </summary>
+/// <remarks>
+/// Stores orders in a dictionary. No seed data; orders are added when created via the API.
+/// Suitable for demos and tests; replace with persistent storage for production.
+/// </remarks>
 public class InMemoryOrderRepository : IOrderRepository
 {
     private readonly Dictionary<Guid, Order> _orders = new();

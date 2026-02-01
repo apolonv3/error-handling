@@ -6,8 +6,14 @@ using ErrorHandling.Domain.ValueObjects;
 namespace ErrorHandling.Domain.Services;
 
 /// <summary>
-/// Order service using traditional exception-based error handling
+/// Order service that uses exceptions for error handling.
 /// </summary>
+/// <remarks>
+/// All failures (validation, not found, business rules) are signaled by throwing
+/// domain exceptions (e.g. <see cref="ValidationException"/>, <see cref="EntityNotFoundException"/>).
+/// The API layer catches these in middleware and converts them to Problem Details.
+/// Use <see cref="ResultOrderService"/> for a type-safe Result-based approach instead.
+/// </remarks>
 public class ExceptionOrderService
 {
     private readonly ICustomerRepository _customerRepository;

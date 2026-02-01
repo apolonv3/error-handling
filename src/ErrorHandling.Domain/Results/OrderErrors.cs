@@ -4,8 +4,12 @@ using ErrorHandling.Domain.ValueObjects;
 namespace ErrorHandling.Domain.Results;
 
 /// <summary>
-/// Type-safe error codes for order operations. Replaces string codes for exhaustiveness.
+/// Type-safe error codes for order operations.
 /// </summary>
+/// <remarks>
+/// Replaces string-based error codes so that API and services can use exhaustive
+/// pattern matching (switch on CodeEnum) and the compiler can enforce handling of all cases.
+/// </remarks>
 public enum OrderErrorCode
 {
     Validation,
@@ -20,8 +24,13 @@ public enum OrderErrorCode
 }
 
 /// <summary>
-/// Base type for all order-related errors. Enables exhaustive pattern matching.
+/// Base type for all order-related domain errors.
 /// </summary>
+/// <remarks>
+/// Extends <see cref="Error"/> with a strongly-typed <see cref="OrderErrorCode"/> so that
+/// API layer can pattern-match on error kind and map to HTTP status and problem details
+/// without relying on string codes.
+/// </remarks>
 public abstract class OrderError : Error
 {
     public OrderErrorCode CodeEnum { get; }
@@ -33,7 +42,13 @@ public abstract class OrderError : Error
     }
 }
 
-/// <summary>Validation failed for a specific field.</summary>
+/// <summary>
+/// Validation failed for a specific input field.
+/// </summary>
+/// <remarks>
+/// Used when request data fails validation (e.g. empty customer ID, negative quantity).
+/// Maps to HTTP 400 Bad Request.
+/// </remarks>
 public sealed class OrderValidationError : OrderError
 {
     public string Field { get; }
@@ -46,7 +61,13 @@ public sealed class OrderValidationError : OrderError
     }
 }
 
-/// <summary>An entity was not found by id.</summary>
+/// <summary>
+/// An entity was not found by its identifier.
+/// </summary>
+/// <remarks>
+/// Used when Customer, Order, or Product lookup by ID returns null.
+/// Maps to HTTP 404 Not Found.
+/// </remarks>
 public sealed class EntityNotFoundError : OrderError
 {
     public string EntityName { get; }
@@ -67,7 +88,13 @@ public sealed class EntityNotFoundError : OrderError
     }
 }
 
-/// <summary>Customer is not in active status.</summary>
+/// <summary>
+/// Customer is not in active status and cannot place or modify orders.
+/// </summary>
+/// <remarks>
+/// Used when creating an order for a suspended or closed customer.
+/// Maps to HTTP 422 Unprocessable Entity.
+/// </remarks>
 public sealed class CustomerNotActiveError : OrderError
 {
     public Guid CustomerId { get; }
@@ -88,7 +115,12 @@ public sealed class CustomerNotActiveError : OrderError
     }
 }
 
-/// <summary>Product is not available for purchase.</summary>
+/// <summary>
+/// Product is not available for purchase (e.g. deactivated or out of catalog).
+/// </summary>
+/// <remarks>
+/// Used when adding an inactive product to an order. Maps to HTTP 422 Unprocessable Entity.
+/// </remarks>
 public sealed class ProductInactiveError : OrderError
 {
     public Guid ProductId { get; }
@@ -109,7 +141,13 @@ public sealed class ProductInactiveError : OrderError
     }
 }
 
-/// <summary>Insufficient stock for the requested quantity.</summary>
+/// <summary>
+/// Insufficient stock for the requested quantity.
+/// </summary>
+/// <remarks>
+/// Used when reserving stock for an order line exceeds available quantity.
+/// Maps to HTTP 422 Unprocessable Entity.
+/// </remarks>
 public sealed class InsufficientStockError : OrderError
 {
     public int Available { get; }
@@ -130,7 +168,13 @@ public sealed class InsufficientStockError : OrderError
     }
 }
 
-/// <summary>Invalid state transition for an entity.</summary>
+/// <summary>
+/// Invalid state transition for an entity (e.g. submitting an already submitted order).
+/// </summary>
+/// <remarks>
+/// Used when an operation is not allowed in the current entity state.
+/// Maps to HTTP 422 Unprocessable Entity.
+/// </remarks>
 public sealed class OrderInvalidStateTransitionError : OrderError
 {
     public string FromState { get; }
@@ -154,7 +198,13 @@ public sealed class OrderInvalidStateTransitionError : OrderError
     }
 }
 
-/// <summary>Payment amount is less than order total.</summary>
+/// <summary>
+/// Payment amount is less than the order total.
+/// </summary>
+/// <remarks>
+/// Used when processing payment and the amount does not cover the order total.
+/// Maps to HTTP 422 Unprocessable Entity.
+/// </remarks>
 public sealed class InsufficientPaymentError : OrderError
 {
     public Money PaymentAmount { get; }
@@ -175,7 +225,12 @@ public sealed class InsufficientPaymentError : OrderError
     }
 }
 
-/// <summary>Required value was null.</summary>
+/// <summary>
+/// A required value was null (e.g. payment amount not provided).
+/// </summary>
+/// <remarks>
+/// Used for null checks on required inputs. Maps to HTTP 400 Bad Request.
+/// </remarks>
 public sealed class NullValueError : OrderError
 {
     public string FieldName { get; }
@@ -188,7 +243,12 @@ public sealed class NullValueError : OrderError
     }
 }
 
-/// <summary>Order must have at least one item to submit.</summary>
+/// <summary>
+/// Order must have at least one line item before it can be submitted.
+/// </summary>
+/// <remarks>
+/// Used when submitting an empty order. Maps to HTTP 422 Unprocessable Entity.
+/// </remarks>
 public sealed class OrderMustHaveItemsError : OrderError
 {
     public OrderMustHaveItemsError()

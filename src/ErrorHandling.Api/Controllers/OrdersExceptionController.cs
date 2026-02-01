@@ -7,9 +7,14 @@ using Microsoft.AspNetCore.Mvc;
 namespace ErrorHandling.Api.Controllers;
 
 /// <summary>
-/// Controller demonstrating exception-based error handling
-/// Exceptions are caught by GlobalExceptionMiddleware and converted to Problem Details
+/// API controller for order operations using exception-based error handling.
 /// </summary>
+/// <remarks>
+/// All endpoints call <see cref="ExceptionOrderService"/>. Failures are signaled by domain
+/// exceptions (e.g. <see cref="EntityNotFoundException"/>, <see cref="ValidationException"/>),
+/// which are caught by <see cref="GlobalExceptionMiddleware"/> and converted to RFC 7807
+/// Problem Details. Use the result-based <see cref="OrdersResultController"/> for type-safe errors.
+/// </remarks>
 [ApiController]
 [Route("api/v1/exception/orders")]
 public class OrdersExceptionController : ControllerBase

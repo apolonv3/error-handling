@@ -4,6 +4,15 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ErrorHandling.Api.Middleware;
 
+/// <summary>
+/// Middleware that catches unhandled exceptions and converts them to RFC 7807 Problem Details.
+/// </summary>
+/// <remarks>
+/// Wraps the pipeline in try/catch. Domain exceptions (e.g. <see cref="EntityNotFoundException"/>,
+/// <see cref="ValidationException"/>, <see cref="BusinessRuleException"/>) are mapped to
+/// appropriate HTTP status and problem details; other exceptions return 500 and optionally
+/// include details in development.
+/// </remarks>
 public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;

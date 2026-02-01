@@ -1,5 +1,13 @@
 namespace ErrorHandling.Domain.Results;
 
+/// <summary>
+/// Base type for domain errors; carries a code, message, type, and optional metadata.
+/// </summary>
+/// <remarks>
+/// Used by <see cref="Result"/> and <see cref="Result{T}"/> to represent failure. Subtypes
+/// (e.g. <see cref="OrderError"/>, <see cref="ValidationError"/>, <see cref="BusinessRuleError"/>)
+/// add strongly-typed data and enable exhaustive pattern matching in the API layer.
+/// </remarks>
 public class Error : IEquatable<Error>
 {
     private Dictionary<string, object>? _metadata;

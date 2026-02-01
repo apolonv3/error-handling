@@ -5,6 +5,16 @@ using ErrorHandling.Domain.ValueObjects;
 
 namespace ErrorHandling.Domain.Services;
 
+/// <summary>
+/// Order service that uses the Result pattern and type-safe <see cref="OrderError"/> for failures.
+/// </summary>
+/// <remarks>
+/// All operations return <see cref="Result{T}"/> or <see cref="Result"/> instead of throwing.
+/// Failures use sealed <see cref="OrderError"/> subtypes (e.g. <see cref="OrderValidationError"/>,
+/// <see cref="EntityNotFoundError"/>) so the API can pattern-match and map to HTTP status and
+/// Problem Details without string-based error codes. Supports railway-oriented style via
+/// <see cref="ResultExtensions.BindAsync"/> (e.g. ProcessOrderWorkflowAsync).
+/// </remarks>
 public class ResultOrderService
 {
     private readonly ICustomerRepository _customerRepository;

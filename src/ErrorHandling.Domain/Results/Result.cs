@@ -1,5 +1,13 @@
 namespace ErrorHandling.Domain.Results;
 
+/// <summary>
+/// Represents the outcome of an operation that can succeed (unit) or fail with an <see cref="Error"/>.
+/// </summary>
+/// <remarks>
+/// Use <see cref="Result.Success"/> and <see cref="Result.Failure(Error)"/> to create instances.
+/// Use <see cref="Result.Combine"/> to aggregate multiple results. For a value on success, use
+/// <see cref="Result{T}"/>.
+/// </remarks>
 public class Result
 {
     public bool IsSuccess { get; }
@@ -44,6 +52,16 @@ public class Result
     }
 }
 
+/// <summary>
+/// Represents the outcome of an operation that can succeed with a value of type <typeparamref name="T"/>
+/// or fail with an <see cref="Error"/>.
+/// </summary>
+/// <remarks>
+/// Use <see cref="Result{T}.Match"/> or <see cref="Result{T}.Match(Action{T}, Action{Error})"/> to
+/// handle both cases. Use <see cref="ResultExtensions.MapAsync"/>, <see cref="ResultExtensions.BindAsync"/>
+/// for railway-oriented composition.
+/// </remarks>
+/// <typeparam name="T">The type of the value on success.</typeparam>
 public class Result<T> : Result
 {
     private readonly T _value;
