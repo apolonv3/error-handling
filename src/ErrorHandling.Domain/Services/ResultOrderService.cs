@@ -25,26 +25,19 @@ public class ResultOrderService
     public async Task<Result<Order>> CreateOrderAsync(Guid customerId, string shippingAddress)
     {
         if (customerId == Guid.Empty)
-            return Result<Order>.Failure(Error.Validation("customerId", "Customer ID is required"));
+            return Result<Order>.Failure(new OrderValidationError("customerId", "Customer ID is required"));
 
         if (string.IsNullOrWhiteSpace(shippingAddress))
             return Result<Order>.Failure(
-                Error.Validation("shippingAddress", "Shipping address is required")
+                new OrderValidationError("shippingAddress", "Shipping address is required")
             );
 
         var customer = await _customerRepository.GetByIdOrDefaultAsync(customerId);
         if (customer == null)
-            return Result<Order>.Failure(Error.NotFound(nameof(Customer), customerId));
+            return Result<Order>.Failure(new EntityNotFoundError(nameof(Customer), customerId));
 
         if (customer.Status != CustomerStatus.Active)
-            return Result<Order>.Failure(
-                new BusinessRuleError(
-                    "INACTIVE_CUSTOMER",
-                    $"Customer {customerId} is not active. Current status: {customer.Status}"
-                )
-                    .WithMetadata("customerId", customerId)
-                    .WithMetadata("customerStatus", customer.Status)
-            );
+            return Result<Order>.Failure(new CustomerNotActiveError(customerId, customer.Status));
 
         var orderResult = Order.Create(customerId, shippingAddress);
         if (orderResult.IsFailure)
@@ -58,33 +51,26 @@ public class ResultOrderService
     public async Task<Result<Order>> AddItemToOrderAsync(Guid orderId, Guid productId, int quantity)
     {
         if (orderId == Guid.Empty)
-            return Result<Order>.Failure(Error.Validation("orderId", "Order ID is required"));
+            return Result<Order>.Failure(new OrderValidationError("orderId", "Order ID is required"));
 
         if (productId == Guid.Empty)
-            return Result<Order>.Failure(Error.Validation("productId", "Product ID is required"));
+            return Result<Order>.Failure(new OrderValidationError("productId", "Product ID is required"));
 
         if (quantity <= 0)
             return Result<Order>.Failure(
-                Error.Validation("quantity", "Quantity must be greater than zero")
+                new OrderValidationError("quantity", "Quantity must be greater than zero")
             );
 
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result<Order>.Failure(Error.NotFound(nameof(Order), orderId));
+            return Result<Order>.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         var product = await _productRepository.GetByIdOrDefaultAsync(productId);
         if (product == null)
-            return Result<Order>.Failure(Error.NotFound(nameof(Product), productId));
+            return Result<Order>.Failure(new EntityNotFoundError(nameof(Product), productId));
 
         if (!product.IsActive)
-            return Result<Order>.Failure(
-                new BusinessRuleError(
-                    "PRODUCT_INACTIVE",
-                    $"Product {product.Name} is not available for purchase"
-                )
-                    .WithMetadata("productId", productId)
-                    .WithMetadata("productName", product.Name)
-            );
+            return Result<Order>.Failure(new ProductInactiveError(productId, product.Name));
 
         var reserveResult = product.TryReserveStock(quantity);
         if (reserveResult.IsFailure)
@@ -104,11 +90,11 @@ public class ResultOrderService
     {
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result<Order>.Failure(Error.NotFound(nameof(Order), orderId));
+            return Result<Order>.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         var customer = await _customerRepository.GetByIdOrDefaultAsync(order.CustomerId);
         if (customer == null)
-            return Result<Order>.Failure(Error.NotFound(nameof(Customer), order.CustomerId));
+            return Result<Order>.Failure(new EntityNotFoundError(nameof(Customer), order.CustomerId));
 
         var creditResult = customer.TryUseCredit(order.TotalAmount);
         if (creditResult.IsFailure)
@@ -127,21 +113,14 @@ public class ResultOrderService
     public async Task<Result<Order>> ProcessPaymentAsync(Guid orderId, Money? paymentAmount)
     {
         if (paymentAmount is null)
-            return Result<Order>.Failure("NULL_VALUE", "Payment amount cannot be null");
+            return Result<Order>.Failure(new NullValueError("paymentAmount", "Payment amount cannot be null"));
 
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result<Order>.Failure(Error.NotFound(nameof(Order), orderId));
+            return Result<Order>.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         if (paymentAmount < order.TotalAmount)
-            return Result<Order>.Failure(
-                new BusinessRuleError(
-                    "INSUFFICIENT_PAYMENT",
-                    $"Payment amount {paymentAmount} is less than order total {order.TotalAmount}"
-                )
-                    .WithMetadata("paymentAmount", paymentAmount)
-                    .WithMetadata("orderTotal", order.TotalAmount)
-            );
+            return Result<Order>.Failure(new InsufficientPaymentError(paymentAmount, order.TotalAmount));
 
         var approveResult = order.ApproveSafe();
         if (approveResult.IsFailure)
@@ -156,7 +135,7 @@ public class ResultOrderService
     {
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result<Order>.Failure(Error.NotFound(nameof(Order), orderId));
+            return Result<Order>.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         var shipResult = order.ShipSafe();
         if (shipResult.IsFailure)
@@ -170,15 +149,15 @@ public class ResultOrderService
     public async Task<Result> CancelOrderAsync(Guid orderId, string reason)
     {
         if (string.IsNullOrWhiteSpace(reason))
-            return Result.Failure(Error.Validation("reason", "Cancellation reason is required"));
+            return Result.Failure(new OrderValidationError("reason", "Cancellation reason is required"));
 
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
-            return Result.Failure(Error.NotFound(nameof(Order), orderId));
+            return Result.Failure(new EntityNotFoundError(nameof(Order), orderId));
 
         var customer = await _customerRepository.GetByIdOrDefaultAsync(order.CustomerId);
         if (customer == null)
-            return Result.Failure(Error.NotFound(nameof(Customer), order.CustomerId));
+            return Result.Failure(new EntityNotFoundError(nameof(Customer), order.CustomerId));
 
         if (order.Status == OrderStatus.Approved || order.Status == OrderStatus.Submitted)
         {

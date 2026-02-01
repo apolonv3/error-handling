@@ -29,7 +29,7 @@ public static class ResultExtensions
         var problemDetails = new Microsoft.AspNetCore.Mvc.ProblemDetails
         {
             Status = statusCode,
-            Title = GetTitle(error.Type),
+            Title = GetTitle(error),
             Type = type,
             Detail = error.Message,
             Instance = context.Request.Path,
@@ -71,8 +71,45 @@ public static class ResultExtensions
         return new ObjectResult(problemDetails) { StatusCode = statusCode };
     }
 
-    private static (int statusCode, string type) GetStatusAndType(Error error) =>
-        error.Type switch
+    /// <summary>
+    /// Type-safe mapping: pattern match on OrderError for exhaustive handling.
+    /// Falls back to Error.Type for non-OrderError (e.g. from entities).
+    /// </summary>
+    private static (int statusCode, string type) GetStatusAndType(Error error)
+    {
+        if (error is OrderError orderError)
+        {
+            return orderError.CodeEnum switch
+            {
+                OrderErrorCode.Validation => (
+                    StatusCodes.Status400BadRequest,
+                    "https://example.com/errors/validation"
+                ),
+                OrderErrorCode.EntityNotFound => (
+                    StatusCodes.Status404NotFound,
+                    "https://example.com/errors/not-found"
+                ),
+                OrderErrorCode.CustomerNotActive
+                or OrderErrorCode.ProductInactive
+                or OrderErrorCode.InsufficientStock
+                or OrderErrorCode.InvalidStateTransition
+                or OrderErrorCode.InsufficientPayment
+                or OrderErrorCode.OrderMustHaveItems => (
+                    StatusCodes.Status422UnprocessableEntity,
+                    "https://example.com/errors/business-rule"
+                ),
+                OrderErrorCode.NullValue => (
+                    StatusCodes.Status400BadRequest,
+                    "https://example.com/errors/validation"
+                ),
+                _ => (
+                    StatusCodes.Status422UnprocessableEntity,
+                    "https://example.com/errors/business-rule"
+                ),
+            };
+        }
+
+        return error.Type switch
         {
             ErrorType.Validation => (
                 StatusCodes.Status400BadRequest,
@@ -103,8 +140,31 @@ public static class ResultExtensions
                 "https://example.com/errors/business-rule"
             ),
         };
+    }
 
-    private static string GetTitle(ErrorType type) =>
+    private static string GetTitle(Error error)
+    {
+        if (error is OrderError orderError)
+        {
+            return orderError.CodeEnum switch
+            {
+                OrderErrorCode.Validation => "Validation Error",
+                OrderErrorCode.EntityNotFound => "Resource Not Found",
+                OrderErrorCode.CustomerNotActive => "Customer Not Active",
+                OrderErrorCode.ProductInactive => "Product Unavailable",
+                OrderErrorCode.InsufficientStock => "Insufficient Stock",
+                OrderErrorCode.InvalidStateTransition => "Invalid State Transition",
+                OrderErrorCode.InsufficientPayment => "Insufficient Payment",
+                OrderErrorCode.NullValue => "Validation Error",
+                OrderErrorCode.OrderMustHaveItems => "Order Must Have Items",
+                _ => "Business Rule Violation",
+            };
+        }
+
+        return GetTitleFromType(error.Type);
+    }
+
+    private static string GetTitleFromType(ErrorType type) =>
         type switch
         {
             ErrorType.Validation => "Validation Error",
