@@ -85,20 +85,17 @@ public class OrdersResultController : ControllerBase
     )]
     public async Task<IActionResult> GetOrder(Guid orderId)
     {
-        // Validation using Result
         if (orderId == Guid.Empty)
         {
-            return Result<Order>
+            return Result<Order, OrderError>
                 .Failure(new OrderValidationError("orderId", "Invalid order ID"))
                 .ToProblemDetails(HttpContext);
         }
 
-        // Simulated order retrieval
         await Task.Delay(10);
 
-        // For demo, returning a result
         var order = new Order(Guid.NewGuid(), "123 Main St");
-        return Result<Order>.Success(order).ToProblemDetails(HttpContext);
+        return Result<Order, OrderError>.Success(order).ToProblemDetails(HttpContext);
     }
 
     [HttpPost("{orderId}/items")]
@@ -203,7 +200,8 @@ public class OrdersResultController : ControllerBase
                 var result = await _orderService.ProcessPaymentAsync(orderId, money);
                 return result.ToProblemDetails(HttpContext);
             },
-            error => Task.FromResult(Result<Order>.Failure(error).ToProblemDetails(HttpContext))
+            error => Task.FromResult(
+                Result<Order, OrderError>.Failure(new OrderValidationError("amount", error.Message)).ToProblemDetails(HttpContext))
         );
     }
 
@@ -321,7 +319,8 @@ public class OrdersResultController : ControllerBase
                 );
                 return result.ToProblemDetails(HttpContext);
             },
-            error => Task.FromResult(Result<Order>.Failure(error).ToProblemDetails(HttpContext))
+            error => Task.FromResult(
+                Result<Order, OrderError>.Failure(new OrderValidationError("paymentAmount", error.Message)).ToProblemDetails(HttpContext))
         );
     }
 }

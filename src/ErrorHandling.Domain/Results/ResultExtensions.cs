@@ -55,6 +55,47 @@ public static class ResultExtensions
         return await binder(result.Value);
     }
 
+    /// <summary>Async map for <see cref="Result{TValue, TError}"/>.</summary>
+    public static async Task<Result<TNewValue, TError>> MapAsync<TValue, TNewValue, TError>(
+        this Result<TValue, TError> result,
+        Func<TValue, Task<TNewValue>> mapper
+    )
+        where TError : class
+    {
+        if (result.IsFailure)
+            return Result<TNewValue, TError>.Failure(result.Error);
+
+        var value = await mapper(result.Value);
+        return Result<TNewValue, TError>.Success(value);
+    }
+
+    /// <summary>Async bind for <see cref="Result{TValue, TError}"/>.</summary>
+    public static async Task<Result<TNewValue, TError>> BindAsync<TValue, TNewValue, TError>(
+        this Result<TValue, TError> result,
+        Func<TValue, Task<Result<TNewValue, TError>>> binder
+    )
+        where TError : class
+    {
+        if (result.IsFailure)
+            return Result<TNewValue, TError>.Failure(result.Error);
+
+        return await binder(result.Value);
+    }
+
+    /// <summary>Async bind for <see cref="Task"/> of <see cref="Result{TValue, TError}"/>.</summary>
+    public static async Task<Result<TNewValue, TError>> BindAsync<TValue, TNewValue, TError>(
+        this Task<Result<TValue, TError>> resultTask,
+        Func<TValue, Task<Result<TNewValue, TError>>> binder
+    )
+        where TError : class
+    {
+        var result = await resultTask;
+        if (result.IsFailure)
+            return Result<TNewValue, TError>.Failure(result.Error);
+
+        return await binder(result.Value);
+    }
+
     public static async Task<Result<T>> TapAsync<T>(this Result<T> result, Func<T, Task> action)
     {
         if (result.IsSuccess)

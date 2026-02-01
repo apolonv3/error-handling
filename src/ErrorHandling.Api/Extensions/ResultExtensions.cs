@@ -40,6 +40,30 @@ public static class ResultExtensions
     }
 
     /// <summary>
+    /// Converts a <see cref="Result{TValue, TError}"/> with <see cref="OrderError"/> to an <see cref="IActionResult"/>.
+    /// Success returns Ok(value); failure returns Problem Details from the typed <see cref="OrderError"/>.
+    /// </summary>
+    public static IActionResult ToProblemDetails<T>(this Result<T, OrderError> result, HttpContext context)
+    {
+        if (result.IsSuccess)
+            return new OkObjectResult(result.Value);
+
+        return ConvertErrorToProblemDetails(result.Error, context);
+    }
+
+    /// <summary>
+    /// Converts a unit <see cref="Result{OrderError}"/> to an <see cref="IActionResult"/>.
+    /// Success returns 204 No Content; failure returns Problem Details from the typed <see cref="OrderError"/>.
+    /// </summary>
+    public static IActionResult ToProblemDetails(this Result<OrderError> result, HttpContext context)
+    {
+        if (result.IsSuccess)
+            return new NoContentResult();
+
+        return ConvertErrorToProblemDetails(result.Error, context);
+    }
+
+    /// <summary>
     /// Builds RFC 7807 Problem Details from a domain <see cref="Error"/> and current <see cref="HttpContext"/>.
     /// </summary>
     private static IActionResult ConvertErrorToProblemDetails(Error error, HttpContext context)

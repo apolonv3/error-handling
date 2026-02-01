@@ -29,17 +29,18 @@ This document lists parts of the codebase where error handling can be updated or
 
 ---
 
-## 3. **Result&lt;TValue, TError&gt; – Use for order operations**
+## 3. **Result&lt;TValue, TError&gt; – Use for order operations** ✅ Implemented
 
-**Current:** `ResultOrderService` returns `Result<Order>` and `Result` with a single `Error` type. The API must handle `Error` and pattern-match on subclasses.
+**Current:** ~~`ResultOrderService` returned `Result<Order>` and `Result` with a single `Error` type.~~ **Done.**
 
-**Improve:**
-- Use `Result<Order, OrderError>` (and `Result<OrderError>` for unit results) for order operations. Then:
-  - The compiler enforces that only `OrderError` can appear.
-  - API and middleware can switch on `OrderError` / `OrderErrorCode` exhaustively.
-- Add async support for `Result<TValue, TError>` in the Domain (e.g. `BindAsync`, `MapAsync`) so services can keep a railway-oriented style while returning `Result<Order, OrderError>`.
+**Implemented:**
+- **Result.cs (Domain):** Added `Result<TError>` for unit results with typed error (e.g. `Result<OrderError>.Success()`, `Result<OrderError>.Failure(orderError)`).
+- **ResultExtensions.cs (Domain):** Added `MapAsync`, `BindAsync` (and `BindAsync` for `Task<Result<TValue, TError>>`) for `Result<TValue, TError>` so services can chain async operations in a railway-oriented style.
+- **ResultOrderService:** All order operations now return `Result<Order, OrderError>` or `Result<OrderError>` (e.g. `CancelOrderAsync`). Entity failures are cast to `OrderError` where applicable. `ProcessOrderWorkflowAsync` uses `BindAsync` on `Result<Order, OrderError>`.
+- **ResultExtensions.cs (API):** Added `ToProblemDetails(this Result<T, OrderError> result, HttpContext)` and `ToProblemDetails(this Result<OrderError> result, HttpContext)` so the controller can convert typed results to HTTP responses.
+- **OrdersResultController:** Uses the new return types; `GetOrder`, `ProcessPayment`, and `ProcessOrderWorkflow` build `Result<Order, OrderError>` for validation (e.g. Money) and call the new `ToProblemDetails` overloads.
 
-**Files:** `src/ErrorHandling.Domain/Results/Result.cs`, `ResultExtensions.cs`, `ResultOrderService.cs`, `OrdersResultController.cs`, `ResultExtensions.cs` (API)
+**Files:** `src/ErrorHandling.Domain/Results/Result.cs`, `ResultExtensions.cs`, `ResultOrderService.cs`, `OrdersResultController.cs`, `ErrorHandling.Api/Extensions/ResultExtensions.cs`
 
 ---
 
