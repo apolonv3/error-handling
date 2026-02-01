@@ -1,4 +1,5 @@
 using ErrorHandling.Domain.Entities;
+using ErrorHandling.Domain.Repositories;
 using ErrorHandling.Domain.Results;
 using ErrorHandling.Domain.ValueObjects;
 

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using ErrorHandling.Api.Infrastructure;
 using ErrorHandling.Api.Middleware;
 using ErrorHandling.Api.ProblemDetails;
+using ErrorHandling.Domain.Repositories;
 using ErrorHandling.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;

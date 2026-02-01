@@ -1,30 +1,9 @@
 using ErrorHandling.Domain.Entities;
 using ErrorHandling.Domain.Exceptions;
+using ErrorHandling.Domain.Repositories;
 using ErrorHandling.Domain.ValueObjects;
 
 namespace ErrorHandling.Domain.Services;
-
-public interface ICustomerRepository
-{
-    Task<Customer> GetByIdAsync(Guid id);
-    Task<Customer> GetByIdOrDefaultAsync(Guid id);
-    Task SaveAsync(Customer customer);
-}
-
-public interface IProductRepository
-{
-    Task<Product> GetByIdAsync(Guid id);
-    Task<Product> GetByIdOrDefaultAsync(Guid id);
-    Task<List<Product>> GetByIdsAsync(IEnumerable<Guid> ids);
-    Task SaveAsync(Product product);
-    Task SaveAllAsync(IEnumerable<Product> products);
-}
-
-public interface IOrderRepository
-{
-    Task<Order> GetByIdAsync(Guid id);
-    Task SaveAsync(Order order);
-}
 
 /// <summary>
 /// Order service using traditional exception-based error handling
