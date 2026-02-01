@@ -1,5 +1,5 @@
 using ErrorHandling.Domain.Entities;
-using ErrorHandling.Domain.Services;
+using ErrorHandling.Domain.Repositories;
 using ErrorHandling.Domain.ValueObjects;
 
 namespace ErrorHandling.Api.Infrastructure;
@@ -19,14 +19,14 @@ public class InMemoryCustomerRepository : ICustomerRepository
         _customers[customerId] = customer;
     }
 
-    public Task<Customer> GetByIdAsync(Guid id)
+    public Task<Customer?> GetByIdAsync(Guid id)
     {
         if (_customers.TryGetValue(id, out var customer))
-            return Task.FromResult(customer);
-        return Task.FromResult<Customer>(null!);
+            return Task.FromResult<Customer?>(customer);
+        return Task.FromResult<Customer?>(null);
     }
 
-    public Task<Customer> GetByIdOrDefaultAsync(Guid id)
+    public Task<Customer?> GetByIdOrDefaultAsync(Guid id)
     {
         return GetByIdAsync(id);
     }
@@ -56,24 +56,24 @@ public class InMemoryProductRepository : IProductRepository
         _products[productId2] = product2;
     }
 
-    public Task<Product> GetByIdAsync(Guid id)
+    public Task<Product?> GetByIdAsync(Guid id)
     {
         if (_products.TryGetValue(id, out var product))
-            return Task.FromResult(product);
-        return Task.FromResult<Product>(null!);
+            return Task.FromResult<Product?>(product);
+        return Task.FromResult<Product?>(null);
     }
 
-    public Task<Product> GetByIdOrDefaultAsync(Guid id)
+    public Task<Product?> GetByIdOrDefaultAsync(Guid id)
     {
         return GetByIdAsync(id);
     }
 
     public Task<List<Product>> GetByIdsAsync(IEnumerable<Guid> ids)
     {
-        var products = ids.Select(id =>
-                _products.TryGetValue(id, out var product) ? product : null!
-            )
+        var products = ids
+            .Select(id => _products.TryGetValue(id, out var product) ? product : null)
             .Where(p => p != null)
+            .Cast<Product>()
             .ToList();
         return Task.FromResult(products);
     }
@@ -98,11 +98,11 @@ public class InMemoryOrderRepository : IOrderRepository
 {
     private readonly Dictionary<Guid, Order> _orders = new();
 
-    public Task<Order> GetByIdAsync(Guid id)
+    public Task<Order?> GetByIdAsync(Guid id)
     {
         if (_orders.TryGetValue(id, out var order))
-            return Task.FromResult(order);
-        return Task.FromResult<Order>(null!);
+            return Task.FromResult<Order?>(order);
+        return Task.FromResult<Order?>(null);
     }
 
     public Task SaveAsync(Order order)
