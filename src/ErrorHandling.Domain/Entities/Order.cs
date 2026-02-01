@@ -48,11 +48,11 @@ public class Order
     public static Result<Order> Create(Guid customerId, string shippingAddress)
     {
         if (customerId == Guid.Empty)
-            return Result<Order>.Failure(Error.Validation("customerId", "Customer ID is required"));
+            return Result<Order>.Failure(new OrderValidationError("customerId", "Customer ID is required"));
 
         if (string.IsNullOrWhiteSpace(shippingAddress))
             return Result<Order>.Failure(
-                Error.Validation("shippingAddress", "Shipping address is required")
+                new OrderValidationError("shippingAddress", "Shipping address is required")
             );
 
         var order = new Order
@@ -101,18 +101,16 @@ public class Order
     public Result AddItemSafe(Product product, int quantity)
     {
         if (product == null)
-            return Result.Failure("NULL_PRODUCT", "Product cannot be null");
+            return Result.Failure(new NullValueError("product", "Product cannot be null"));
 
         if (quantity <= 0)
             return Result.Failure(
-                Error.Validation("quantity", "Quantity must be greater than zero")
+                new OrderValidationError("quantity", "Quantity must be greater than zero")
             );
 
         if (Status != OrderStatus.Pending)
             return Result.Failure(
-                new Error("INVALID_STATE", $"Cannot add items to order with status {Status}")
-                    .WithMetadata("currentStatus", Status)
-                    .WithMetadata("requiredStatus", OrderStatus.Pending)
+                new OrderInvalidStateTransitionError(Status.ToString(), "AddingItem", nameof(Order))
             );
 
         var existingItem = _items.FirstOrDefault(i => i.ProductId == product.Id);
@@ -175,21 +173,11 @@ public class Order
     {
         if (Status != OrderStatus.Pending)
             return Result.Failure(
-                new Error(
-                    "INVALID_STATE_TRANSITION",
-                    $"Cannot transition from {Status} to {OrderStatus.Submitted}"
-                )
-                    .WithMetadata("fromState", Status)
-                    .WithMetadata("toState", OrderStatus.Submitted)
+                new OrderInvalidStateTransitionError(Status.ToString(), OrderStatus.Submitted.ToString(), nameof(Order))
             );
 
         if (!_items.Any())
-            return Result.Failure(
-                new BusinessRuleError(
-                    "ORDER_MUST_HAVE_ITEMS",
-                    "Cannot submit an order without items"
-                )
-            );
+            return Result.Failure(new OrderMustHaveItemsError());
 
         Status = OrderStatus.Submitted;
         return Result.Success();
@@ -211,11 +199,7 @@ public class Order
     {
         if (Status != OrderStatus.Submitted)
             return Result.Failure(
-                new InvalidStateTransitionError(
-                    Status.ToString(),
-                    OrderStatus.Approved.ToString(),
-                    nameof(Order)
-                )
+                new OrderInvalidStateTransitionError(Status.ToString(), OrderStatus.Approved.ToString(), nameof(Order))
             );
 
         Status = OrderStatus.Approved;
@@ -239,12 +223,7 @@ public class Order
     {
         if (Status != OrderStatus.Approved)
             return Result.Failure(
-                new Error(
-                    "INVALID_STATE_TRANSITION",
-                    $"Cannot ship order with status {Status}. Order must be approved first."
-                )
-                    .WithMetadata("currentStatus", Status)
-                    .WithMetadata("requiredStatus", OrderStatus.Approved)
+                new OrderInvalidStateTransitionError(Status.ToString(), OrderStatus.Approved.ToString(), nameof(Order))
             );
 
         Status = OrderStatus.Shipped;
@@ -279,15 +258,11 @@ public class Order
             || Status == OrderStatus.Cancelled
         )
             return Result.Failure(
-                new InvalidStateTransitionError(
-                    Status.ToString(),
-                    OrderStatus.Cancelled.ToString(),
-                    nameof(Order)
-                )
+                new OrderInvalidStateTransitionError(Status.ToString(), OrderStatus.Cancelled.ToString(), nameof(Order))
             );
 
         if (string.IsNullOrWhiteSpace(reason))
-            return Result.Failure(Error.Validation("reason", "Cancellation reason is required"));
+            return Result.Failure(new OrderValidationError("reason", "Cancellation reason is required"));
 
         Status = OrderStatus.Cancelled;
         return Result.Success();
@@ -340,20 +315,20 @@ public class OrderItem
     {
         if (productId == Guid.Empty)
             return Result<OrderItem>.Failure(
-                Error.Validation("productId", "Product ID is required")
+                new OrderValidationError("productId", "Product ID is required")
             );
 
         if (string.IsNullOrWhiteSpace(productName))
             return Result<OrderItem>.Failure(
-                Error.Validation("productName", "Product name is required")
+                new OrderValidationError("productName", "Product name is required")
             );
 
         if (unitPrice == null!)
-            return Result<OrderItem>.Failure("NULL_VALUE", "Unit price cannot be null");
+            return Result<OrderItem>.Failure(new NullValueError("unitPrice", "Unit price cannot be null"));
 
         if (quantity <= 0)
             return Result<OrderItem>.Failure(
-                Error.Validation("quantity", "Quantity must be greater than zero")
+                new OrderValidationError("quantity", "Quantity must be greater than zero")
             );
 
         var totalPriceResult = Money.TryCreate(unitPrice.Amount * quantity, unitPrice.Currency);
@@ -380,7 +355,7 @@ public class OrderItem
     {
         if (additional <= 0)
             return Result.Failure(
-                Error.Validation("additional", "Additional quantity must be greater than zero")
+                new OrderValidationError("additional", "Additional quantity must be greater than zero")
             );
 
         Quantity += additional;

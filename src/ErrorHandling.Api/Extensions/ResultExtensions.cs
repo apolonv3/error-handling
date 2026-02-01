@@ -114,7 +114,9 @@ public static class ResultExtensions
                 or OrderErrorCode.InsufficientStock
                 or OrderErrorCode.InvalidStateTransition
                 or OrderErrorCode.InsufficientPayment
-                or OrderErrorCode.OrderMustHaveItems => (
+                or OrderErrorCode.OrderMustHaveItems
+                or OrderErrorCode.InsufficientCredit
+                or OrderErrorCode.CreditOverflow => (
                     StatusCodes.Status422UnprocessableEntity,
                     "https://example.com/errors/business-rule"
                 ),
@@ -178,6 +180,8 @@ public static class ResultExtensions
                 OrderErrorCode.InsufficientPayment => "Insufficient Payment",
                 OrderErrorCode.NullValue => "Validation Error",
                 OrderErrorCode.OrderMustHaveItems => "Order Must Have Items",
+                OrderErrorCode.InsufficientCredit => "Insufficient Credit",
+                OrderErrorCode.CreditOverflow => "Credit Overflow",
                 _ => "Business Rule Violation",
             };
         }

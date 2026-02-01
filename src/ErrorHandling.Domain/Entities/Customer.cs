@@ -105,18 +105,14 @@ public class Customer
     public Result<Money> TryUseCredit(Money amount)
     {
         if (amount is null)
-            return Result<Money>.Failure("NULL_VALUE", "Amount cannot be null");
+            return Result<Money>.Failure(new NullValueError("amount", "Amount cannot be null"));
 
         if (Status != CustomerStatus.Active)
-            return Result<Money>.Failure(
-                new Error("INVALID_STATE", $"Cannot use credit when customer is {Status}")
-                    .WithMetadata("currentStatus", Status)
-                    .WithMetadata("requiredStatus", CustomerStatus.Active)
-            );
+            return Result<Money>.Failure(new CustomerNotActiveError(Id, Status));
 
         var subtractResult = AvailableCredit.TrySubtract(amount);
         if (subtractResult.IsFailure)
-            return Result<Money>.Failure(subtractResult.Error!);
+            return Result<Money>.Failure(new InsufficientCreditError(amount, AvailableCredit));
 
         AvailableCredit = subtractResult.Value;
         return Result<Money>.Success(AvailableCredit);
@@ -140,22 +136,14 @@ public class Customer
     public Result RestoreCreditSafe(Money amount)
     {
         if (amount is null)
-            return Result.Failure("NULL_VALUE", "Amount cannot be null");
+            return Result.Failure(new NullValueError("amount", "Amount cannot be null"));
 
         var addResult = AvailableCredit.TryAdd(amount);
         if (addResult.IsFailure)
             return Result.Failure(addResult.Error!);
 
         if (addResult.Value > CreditLimit)
-            return Result.Failure(
-                new BusinessRuleError(
-                    "CREDIT_OVERFLOW",
-                    $"Restoring {amount} would exceed credit limit of {CreditLimit}"
-                )
-                    .WithMetadata("currentCredit", AvailableCredit)
-                    .WithMetadata("creditLimit", CreditLimit)
-                    .WithMetadata("attemptedRestore", amount)
-            );
+            return Result.Failure(new CreditOverflowError(amount, CreditLimit));
 
         AvailableCredit = addResult.Value;
         return Result.Success();

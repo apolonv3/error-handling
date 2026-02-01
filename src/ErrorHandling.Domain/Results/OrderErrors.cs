@@ -21,6 +21,8 @@ public enum OrderErrorCode
     InsufficientPayment,
     NullValue,
     OrderMustHaveItems,
+    InsufficientCredit,
+    CreditOverflow,
 }
 
 /// <summary>
@@ -258,4 +260,58 @@ public sealed class OrderMustHaveItemsError : OrderError
             "Cannot submit an order without items",
             ErrorType.Failure
         ) { }
+}
+
+/// <summary>
+/// Customer has insufficient available credit for the requested amount.
+/// </summary>
+/// <remarks>
+/// Used when using credit (e.g. on order submit) and available credit is less than the amount.
+/// Maps to HTTP 422 Unprocessable Entity.
+/// </remarks>
+public sealed class InsufficientCreditError : OrderError
+{
+    public Money RequestedAmount { get; }
+    public Money AvailableCredit { get; }
+
+    public InsufficientCreditError(Money requestedAmount, Money availableCredit)
+        : base(
+            OrderErrorCode.InsufficientCredit,
+            "INSUFFICIENT_CREDIT",
+            $"Available credit ({availableCredit}) is less than requested amount ({requestedAmount})",
+            ErrorType.Failure
+        )
+    {
+        RequestedAmount = requestedAmount;
+        AvailableCredit = availableCredit;
+        WithMetadata("requestedAmount", requestedAmount);
+        WithMetadata("availableCredit", availableCredit);
+    }
+}
+
+/// <summary>
+/// Restoring credit would exceed the customer's credit limit.
+/// </summary>
+/// <remarks>
+/// Used when restoring credit on order cancel and the new balance would exceed the limit.
+/// Maps to HTTP 422 Unprocessable Entity.
+/// </remarks>
+public sealed class CreditOverflowError : OrderError
+{
+    public Money AttemptedRestore { get; }
+    public Money CreditLimit { get; }
+
+    public CreditOverflowError(Money attemptedRestore, Money creditLimit)
+        : base(
+            OrderErrorCode.CreditOverflow,
+            "CREDIT_OVERFLOW",
+            $"Restoring {attemptedRestore} would exceed credit limit of {creditLimit}",
+            ErrorType.Failure
+        )
+    {
+        AttemptedRestore = attemptedRestore;
+        CreditLimit = creditLimit;
+        WithMetadata("attemptedRestore", attemptedRestore);
+        WithMetadata("creditLimit", creditLimit);
+    }
 }
