@@ -8,10 +8,11 @@ The **csharp-error-handling-demo** project offers a thorough demonstration of er
 
 ## 🌟 Key Features
 
-- **Exceptions vs. Result Pattern**: Learn the differences between traditional error handling and the more modern Result Pattern.
-- **Compliant with RFC 7807**: Understand how to format error details following established standards.
-- **Interactive Demos**: Engage with real-world examples to see how each pattern functions.
-- **User-Friendly Interface**: Navigate and interact with the application easily.
+- **Exceptions vs. Result Pattern**: Learn the differences between traditional error handling and the Result pattern with type-safe errors.
+- **Type-safe errors**: Order operations use `Result<Order, OrderError>` and `Result<OrderError>` so only `OrderError` (e.g. `OrderValidationError`, `EntityNotFoundError`) can appear; the API maps them to HTTP status and RFC 7807 Problem Details.
+- **Repository pattern**: Domain defines repository interfaces; the API provides in-memory implementations for demos.
+- **Compliant with RFC 7807**: Error details follow the Problem Details standard.
+- **Interactive Demos**: Try both approaches via `/api/v1/exception/orders` and `/api/v1/result/orders`.
 
 ## 📋 System Requirements
 
@@ -36,9 +37,30 @@ To run this application, ensure your system meets the following requirements:
 
 ## 🔍 Understanding the Error Handling Patterns
 
+The project supports two approaches; choose based on whether you prefer exceptions or explicit, type-safe results.
+
 ### ⚡ Using Exceptions
 
-Exceptions are a traditional way to manage errors in programming. This project exemplifies how to throw, catch, and manage exceptions effectively within C# applications. 
+Exceptions are a traditional way to manage errors. The **exception-based** flow uses domain exceptions (e.g. `ValidationException`, `EntityNotFoundException`, `BusinessRuleException`). The API exposes them via `/api/v1/exception/orders`. `GlobalExceptionMiddleware` catches unhandled exceptions and converts them to RFC 7807 Problem Details.
+
+### ✅ Using the Result pattern (type-safe)
+
+The **Result-based** flow uses `Result<TValue, TError>` and `Result<TError>` so the compiler enforces a single error type.
+
+- **Order operations** return `Result<Order, OrderError>` (or `Result<OrderError>` for unit, e.g. cancel). Only `OrderError` can appear on failure.
+- **Typed errors** are sealed types (e.g. `OrderValidationError`, `EntityNotFoundError`, `InsufficientPaymentError`). The API maps them to HTTP status and Problem Details via `OrderErrorCode`.
+- **Railway-oriented style** is supported with `BindAsync` and `MapAsync` on `Result<TValue, TError>` (e.g. `ProcessOrderWorkflowAsync`).
+
+The Result API is under `/api/v1/result/orders`. Controllers call `result.ToProblemDetails(HttpContext)` so success becomes 200/201/204 and failure becomes 400/404/422 etc. according to the error type.
+
+### When to use which
+
+| Use case | Approach |
+|----------|----------|
+| Quick prototyping, existing exception-based code | Exceptions + middleware |
+| New features, API-first, exhaustive error handling | Result + `Result<Order, OrderError>` / `Result<OrderError>` |
+
+Further improvement ideas (e.g. CancellationToken, composite validation) are in [docs/ERROR_HANDLING_IMPROVEMENTS.md](docs/ERROR_HANDLING_IMPROVEMENTS.md). 
 
 ## 📚 Additional Resources
 
