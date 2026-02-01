@@ -1,5 +1,6 @@
 using ErrorHandling.Api.Models;
 using ErrorHandling.Domain.Entities;
+using ErrorHandling.Domain.Exceptions;
 using ErrorHandling.Domain.Services;
 using ErrorHandling.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
@@ -78,7 +79,7 @@ public class OrdersExceptionController : ControllerBase
         // This would normally call a repository
         // For demo purposes, returning a sample or throwing
         if (orderId == Guid.Empty)
-            throw new ArgumentException("Invalid order ID");
+            throw new ValidationException("orderId", "Invalid order ID");
 
         // Simulated order retrieval
         await Task.Delay(10);
